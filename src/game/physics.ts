@@ -36,7 +36,7 @@ export const TABLE = {
   laneX: 7.6, // inner wall of plunger lane
   laneTop: -16, // where the lane exits into the playfield
   ballR: 0.55,
-  gravity: 14, // pulls toward +z (6.5° incline feel)
+  gravity: 12, // pulls toward +z (6.5° incline feel)
 };
 
 export interface Seg {
@@ -375,7 +375,7 @@ export function releasePlunger(sim: SimState): boolean {
   sim.plungerPower = 0;
   const laneBall = sim.balls.find((b) => b.active && b.inLane);
   if (laneBall && laneBall.z > 14) {
-    laneBall.vz = -(26 + 34 * power);
+    laneBall.vz = -(40 + 45 * power);
     return true;
   }
   return false;
