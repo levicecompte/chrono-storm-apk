@@ -98,6 +98,7 @@ export function Scene() {
 
       events.length = 0;
       stepSim(s, dt, events);
+      (window as unknown as { __sim: SimState }).__sim = s;
 
       // ball save countdown
       ballSaveTimer.current = Math.max(0, ballSaveTimer.current - dt);
