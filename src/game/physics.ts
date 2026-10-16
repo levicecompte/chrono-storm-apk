@@ -9,6 +9,8 @@ export interface BallState {
   vz: number;
   active: boolean;
   inLane: boolean; // plunger lane
+  tunnel?: { index: number; elapsed: number };
+  tunnelCooldown?: number;
 }
 
 export interface FlipperState {
@@ -25,7 +27,8 @@ export type GameEvent =
   | { type: "portal" }
   | { type: "orbit" }
   | { type: "drain" }
-  | { type: "launch" };
+  | { type: "launch" }
+  | { type: "tunnel"; index: number; bonus: number };
 
 // ---- Table layout (units: ~cm/5, table 20 x 42) ----
 export const TABLE = {
@@ -64,20 +67,19 @@ export const WALLS: Seg[] = [
   // orbit guide: curve at top-left funneling ball down (approximated)
   { ax: -10, az: -12, bx: -6.5, bz: -16.5 },
   { ax: 7.6, az: -16, bx: 5.2, bz: -19.5 },
-  // left outlane funnel
-  { ax: -10, az: 8, bx: -6.2, bz: 13.5 },
-  // right outlane funnel
-  { ax: TABLE.laneX, az: 8, bx: 6.2, bz: 13.5 },
-  // left slingshot (triangle)
-  { ax: -6.2, az: 9.5, bx: -4.6, bz: 13.8, sling: true, rest: 1.1 },
-  { ax: -6.2, az: 9.5, bx: -6.2, bz: 13.5 },
-  // right slingshot
-  { ax: 6.2, az: 9.5, bx: 4.6, bz: 13.8, sling: true, rest: 1.1 },
-  { ax: 6.2, az: 9.5, bx: 6.2, bz: 13.5 },
+  // Open lower approaches: the former slingshots are now bonus tunnels.
   // flipper guides (inlane)
-  { ax: -6.2, az: 13.5, bx: -3.9, bz: 16.2 },
-  { ax: 6.2, az: 13.5, bx: 3.9, bz: 16.2 },
+  { ax: -6.2, az: 13.5, bx: -4.6, bz: 16.2 },
+  { ax: 6.2, az: 13.5, bx: 4.6, bz: 16.2 },
 ];
+
+export const BONUS_TUNNELS = [
+  { x: -5.4, z: 13, length: 3.5, bonus: 5000, upper: false },
+  { x: 5.4, z: 13, length: 3.5, bonus: 5000, upper: false },
+  ...[-14.2, -17.8].flatMap((z) => [-6, -3, 0, 3, 6].map((x) =>
+    ({ x, z, length: 2.1, bonus: 2500, upper: true }))),
+];
+export const CENTER_POST = { x: 0, z: 17.9, r: 0.16 };
 
 export interface CircleToy {
   x: number;
@@ -120,8 +122,8 @@ export interface FlipperDef {
 }
 
 export const FLIPPERS: FlipperDef[] = [
-  { pivotX: -3.6, pivotZ: 16.4, dir: 1 },
-  { pivotX: 3.6, pivotZ: 16.4, dir: -1 },
+  { pivotX: -4.3, pivotZ: 16.4, dir: 1 },
+  { pivotX: 4.3, pivotZ: 16.4, dir: -1 },
 ];
 
 export function flipperTip(f: FlipperDef, angle: number) {
@@ -158,7 +160,7 @@ export function recoverStuckBall(sim: SimState, b: BallState, dt: number) {
     const tip = flipperTip(f, fs.angle);
     return segmentDistance(b.x, b.z, { ax: f.pivotX, az: f.pivotZ, bx: tip.x, bz: tip.z }) < TABLE.ballR + FLIPPER_R + 0.2;
   });
-  if (!b.active || b.inLane || b.z > 18 || caught) {
+  if (!b.active || b.inLane || b.tunnel || b.z > 18 || caught) {
     recovery.delete(b);
     return false;
   }
@@ -179,6 +181,7 @@ export function recoverStuckBall(sim: SimState, b: BallState, dt: number) {
       if (x < TABLE.left + TABLE.ballR || x > TABLE.laneX - TABLE.ballR || z < TABLE.top + TABLE.ballR || z > 15) continue;
       if (WALLS.some((s) => segmentDistance(x, z, s) < TABLE.ballR + 0.15)) continue;
       if ([...BUMPERS, ...TARGETS, CLOCK, PORTAL].some((c) => Math.hypot(x - c.x, z - c.z) < TABLE.ballR + c.r + 0.15)) continue;
+      if (Math.hypot(x - CENTER_POST.x, z - CENTER_POST.z) < TABLE.ballR + CENTER_POST.r + 0.15) continue;
       b.x = x;
       b.z = z;
       b.vx = x > 0 ? -4 : 4;
@@ -331,6 +334,24 @@ export function spawnBall(sim: SimState) {
 function stepBall(sim: SimState, b: BallState, dt: number, events: GameEvent[]) {
   if (!b.active) return;
 
+  b.tunnelCooldown = Math.max(0, (b.tunnelCooldown ?? 0) - dt);
+  if (b.tunnel) {
+    const tunnel = BONUS_TUNNELS[b.tunnel.index];
+    if (!tunnel) { delete b.tunnel; return; }
+    b.tunnel.elapsed += dt;
+    const progress = Math.min(1, b.tunnel.elapsed / 0.45);
+    b.x = tunnel.x;
+    b.z = tunnel.z - progress * (tunnel.length + 0.7);
+    if (progress >= 1) {
+      events.push({ type: "tunnel", index: b.tunnel.index, bonus: tunnel.bonus });
+      delete b.tunnel;
+      b.tunnelCooldown = 1.2;
+      b.vx = tunnel.x > 0 ? -2 : 2;
+      b.vz = -14;
+    }
+    return;
+  }
+
   // gravity along the slope
   b.vz += TABLE.gravity * dt;
   // light rolling resistance
@@ -371,7 +392,19 @@ function stepBall(sim: SimState, b: BallState, dt: number, events: GameEvent[]) 
     b.vx = -Math.abs(b.vx) * 0.4;
   }
 
+  if ((b.tunnelCooldown ?? 0) <= 0 && b.vz < 0) {
+    const index = BONUS_TUNNELS.findIndex((t) => Math.abs(b.x - t.x) < 0.65 && Math.abs(b.z - t.z) < 0.5);
+    if (index >= 0) {
+      b.tunnel = { index, elapsed: 0 };
+      b.vx = b.vz = 0;
+      recovery.delete(b);
+      return;
+    }
+  }
+
   for (const s of WALLS) collideSegment(b, s, events);
+  // Narrow safety nail, separate from scoring toys.
+  collideCircle(b, { ...CENTER_POST, kind: "portal" }, events);
   for (const c of BUMPERS) collideCircle(b, c, events);
   for (const c of TARGETS) collideCircle(b, c, events);
   collideCircle(b, CLOCK, events);

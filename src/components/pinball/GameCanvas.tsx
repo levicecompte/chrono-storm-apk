@@ -6,6 +6,7 @@ import { HUD } from "./HUD";
 export function GameCanvas() {
   return (
     <div className="fixed inset-0 bg-background">
+      <div className="absolute inset-x-0 bottom-0 top-40">
       <Canvas
         shadows
         dpr={[1, 1.75]}
@@ -14,6 +15,7 @@ export function GameCanvas() {
       >
         <Suspense fallback={null}><Scene /></Suspense>
       </Canvas>
+      </div>
       <HUD />
     </div>
   );

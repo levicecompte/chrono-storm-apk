@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import * as THREE from "three";
+import type { SurfaceTextures } from "./surfaceTextures";
 
-export function VintageRails() {
+export function VintageRails({ surfaces }: { surfaces: SurfaceTextures }) {
   const paths = useMemo(() => [-1, 1].map((side) => new THREE.CatmullRomCurve3([
     new THREE.Vector3(side * 5.6, 0.8, 14),
     new THREE.Vector3(side * 8.7, 0.8, 8),
@@ -13,12 +14,12 @@ export function VintageRails() {
   return <>
     {paths.map((curve, i) => <mesh key={i}>
       <tubeGeometry args={[curve, 64, 0.18, 8, false]} />
-      <meshStandardMaterial color="#b9bec3" metalness={0.95} roughness={0.26} />
+      <meshStandardMaterial map={surfaces.metal} color="#b9bec3" metalness={0.95} roughness={0.26} />
     </mesh>)}
     {[-1, 1].flatMap((side) => [0, 1, 2, 3].map((i) =>
       <mesh key={`${side}-${i}`} position={[side * 5.5, 0.12, 1.5 + i * 2.8]} rotation-x={-Math.PI / 2}>
         <circleGeometry args={[0.42, 20]} />
-        <meshStandardMaterial color={side === -1 ? "#b99946" : "#6e9d58"} emissive={side === -1 ? "#ffb65c" : "#729956"} emissiveIntensity={0.45} roughness={0.35} />
+        <meshStandardMaterial map={surfaces.rubber} color={side === -1 ? "#b99946" : "#6e9d58"} emissive={side === -1 ? "#ffb65c" : "#729956"} emissiveIntensity={0.45} roughness={0.35} />
       </mesh>))}
   </>;
 }
