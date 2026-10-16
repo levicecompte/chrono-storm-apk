@@ -1,0 +1,78 @@
+name: Android test APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: bun install
+
+      # This APK wraps the online game configured in capacitor.config.ts.
+      # No SSR server is bundled or started inside the Android application.
+      - name: Prepare web fallback
+        run: |
+          mkdir -p dist/client
+          printf '%s' '<!doctype html><html lang="fr"><meta charset="utf-8"><title>Mansion Pinball</title><body><p>Connexion Internet nécessaire pour ouvrir Mansion Pinball.</p></body></html>' > dist/client/index.html
+
+      - name: Generate and sync Android project
+        run: |
+          if [ ! -d android ]; then bunx cap add android; fi
+          bunx cap sync android
+
+      - name: Compile debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload downloadable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mansion-pinball-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Add download instructions
+        run: |
+          echo '### APK de test Android' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Téléchargez **mansion-pinball-android-debug** dans Artifacts en bas de cette exécution, décompressez le ZIP puis installez app-debug.apk sur Android.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'APK signé automatiquement avec une clé de test, non destiné au Play Store. Internet est nécessaire : cette version ouvre le jeu en ligne configuré dans le projet.' >> "$GITHUB_STEP_SUMMARY"
