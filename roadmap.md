@@ -2,3 +2,4 @@
 - [ ] Ajouter les effets lumineux Tailwind aux scores et commandes, avec réduction des animations.
 - [ ] Tester la physique et vérifier le jeu dans le navigateur.
 - [ ] Adapter le plateau et l’afficheur au flipper photographié : manoir gothique original, marais, cimetière, rails métalliques et ampoules chaudes.
+- [ ] Ajouter un workflow GitHub Actions produisant un APK Android de test téléchargeable sans Android Studio local.
