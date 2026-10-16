@@ -45,7 +45,7 @@ export function HUD() {
       {/* Backglass score */}
       <header className={`backglass mx-auto mt-3 w-[min(94vw,560px)] px-4 py-2 transition-shadow ${g.multiball ? "shadow-tesla motion-safe:animate-energy" : "shadow-brass"}`}>
         <div className="flex items-center justify-between gap-3">
-          <div className="font-display text-xs tracking-[0.25em] text-brass">CHRONO STORM 1885</div>
+          <div className="font-mono text-xs text-nixie">MANSION PINBALL · 1992 TRIBUTE</div>
           <Button
             variant="ghost"
             size="icon"
@@ -65,14 +65,14 @@ export function HUD() {
           <div>
             ×<span className="text-brass">{g.multiplier}</span>
           </div>
-          <div className={`era-${g.era}`}>{g.era.toUpperCase()}</div>
+          <div className="text-nixie">MANSION</div>
           <div>HI {g.highScore.toLocaleString()}</div>
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+        <div className="hidden">
           <div className="tesla-gauge h-full motion-safe:animate-energy transition-all" style={{ width: `${g.teslaCharge}%` }} />
         </div>
         <div className="mt-1 flex justify-between font-display text-[9px] tracking-widest text-muted-foreground">
-          <span>TESLA {Math.round(g.teslaCharge)}%</span>
+          <span>MANSION PINBALL</span>
           <span>{g.multiball ? "STORM SURGE" : g.ballSave ? "BALL SAVE" : "BALL IN PLAY"}</span>
         </div>
       </header>
@@ -109,13 +109,13 @@ export function HUD() {
       {(g.phase === "menu" || g.phase === "gameover") && (
         <div className="pointer-events-auto absolute inset-0 flex items-center justify-center bg-background/70 p-6 backdrop-blur-sm">
           <div className="brass-panel max-w-md p-6 text-center">
-            <h1 className="title-copper font-display text-3xl sm:text-5xl">CHRONO STORM</h1>
-            <div className="font-display text-xl tracking-[0.6em] text-tesla">1885</div>
+            <h1 className="title-copper font-display text-3xl sm:text-5xl">MANSION PINBALL</h1>
+            <div className="font-mono text-sm text-nixie">1992 · ÉDITION HOMMAGE</div>
             {g.phase === "gameover" && (
               <p className="nixie mt-4 text-2xl">{g.score.toLocaleString()}</p>
             )}
             <p className="mt-4 text-sm text-muted-foreground">
-              Stabilisez la faille temporelle. Chargez la bobine Tesla, réglez l'horloge, puis visez le portail.
+              Le manoir ouvre ses portes.
             </p>
             <Button
               onClick={g.start}

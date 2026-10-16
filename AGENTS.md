@@ -11,3 +11,4 @@
 
 - Keep anti-stuck recovery in the pinball physics core and regression-test lane waiting and flipper catches, so visual changes cannot alter ball safety.
 - Define HUD lighting with semantic CSS tokens and Tailwind utilities, honoring reduced-motion preferences.
+- Keep vintage playfield artwork independent from collision geometry; cosmetic rails must not imply additional playable ramps.
