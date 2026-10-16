@@ -136,6 +136,56 @@ export function flipperTip(f: FlipperDef, angle: number) {
 const SUBDT = 1 / 240;
 const REST_WALL = 0.45;
 const REST_BUMPER_BOOST = 16;
+const STUCK_SECONDS = 2;
+const STUCK_RADIUS = 0.8;
+const recovery = new WeakMap<BallState, { x: number; z: number; time: number }>();
+
+function segmentDistance(x: number, z: number, s: Seg) {
+  const dx = s.bx - s.ax;
+  const dz = s.bz - s.az;
+  const t = Math.max(0, Math.min(1, ((x - s.ax) * dx + (z - s.az) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - s.ax - t * dx, z - s.az - t * dz);
+}
+
+// Check displacement, not speed: a trapped ball can jitter with a high velocity.
+export function recoverStuckBall(sim: SimState, b: BallState, dt: number) {
+  const caught = FLIPPERS.some((f, i) => {
+    const fs = sim.flippers[i];
+    if (!fs?.pressed) return false;
+    const tip = flipperTip(f, fs.angle);
+    return segmentDistance(b.x, b.z, { ax: f.pivotX, az: f.pivotZ, bx: tip.x, bz: tip.z }) < TABLE.ballR + FLIPPER_R + 0.2;
+  });
+  if (!b.active || b.inLane || b.z > 18 || caught) {
+    recovery.delete(b);
+    return false;
+  }
+  const watch = recovery.get(b);
+  if (!watch || Math.hypot(b.x - watch.x, b.z - watch.z) > STUCK_RADIUS) {
+    recovery.set(b, { x: b.x, z: b.z, time: 0 });
+    return false;
+  }
+  watch.time += dt;
+  if (watch.time < STUCK_SECONDS) return false;
+
+  // Move only to a nearby clear point; never award points or consume a ball.
+  for (let radius = 1.2; radius <= 8; radius += 0.6) {
+    for (let i = 0; i < 16; i++) {
+      const angle = -Math.PI / 2 + i * Math.PI / 8;
+      const x = b.x + Math.cos(angle) * radius;
+      const z = b.z + Math.sin(angle) * radius;
+      if (x < TABLE.left + TABLE.ballR || x > TABLE.laneX - TABLE.ballR || z < TABLE.top + TABLE.ballR || z > 15) continue;
+      if (WALLS.some((s) => segmentDistance(x, z, s) < TABLE.ballR + 0.15)) continue;
+      if ([...BUMPERS, ...TARGETS, CLOCK, PORTAL].some((c) => Math.hypot(x - c.x, z - c.z) < TABLE.ballR + c.r + 0.15)) continue;
+      b.x = x;
+      b.z = z;
+      b.vx = x > 0 ? -4 : 4;
+      b.vz = -8;
+      recovery.delete(b);
+      return true;
+    }
+  }
+  return false;
+}
 
 function collideSegment(b: BallState, s: Seg, events: GameEvent[]) {
   const dx = s.bx - s.ax;
@@ -148,9 +198,13 @@ function collideSegment(b: BallState, s: Seg, events: GameEvent[]) {
   let nx = b.x - cx;
   let nz = b.z - cz;
   const d = Math.hypot(nx, nz);
-  if (d >= TABLE.ballR || d === 0) return;
-  nx /= d;
-  nz /= d;
+  if (d >= TABLE.ballR) return;
+  if (d < 1e-8) {
+    const len = Math.sqrt(len2);
+    nx = -dz / len;
+    nz = dx / len;
+    if (b.vx * nx + b.vz * nz > 0) { nx = -nx; nz = -nz; }
+  } else { nx /= d; nz /= d; }
   // push out
   b.x = cx + nx * TABLE.ballR;
   b.z = cz + nz * TABLE.ballR;
@@ -171,9 +225,12 @@ function collideCircle(b: BallState, c: CircleToy, events: GameEvent[]) {
   let nz = b.z - c.z;
   const d = Math.hypot(nx, nz);
   const minD = TABLE.ballR + c.r;
-  if (d >= minD || d === 0) return;
-  nx /= d;
-  nz /= d;
+  if (d >= minD) return;
+  if (d < 1e-8) {
+    const speed = Math.hypot(b.vx, b.vz);
+    nx = speed > 0 ? -b.vx / speed : 0;
+    nz = speed > 0 ? -b.vz / speed : 1;
+  } else { nx /= d; nz /= d; }
   b.x = c.x + nx * minD;
   b.z = c.z + nz * minD;
   const vn = b.vx * nx + b.vz * nz;
@@ -186,8 +243,8 @@ function collideCircle(b: BallState, c: CircleToy, events: GameEvent[]) {
     } else {
       b.vx -= 1.6 * vn * nx;
       b.vz -= 1.6 * vn * nz;
-      if (c.kind === "target" && vn < -1.5)
-        events.push({ type: "target", side: c.side!, index: c.index! });
+      if (c.kind === "target" && vn < -1.5 && c.side !== undefined && c.index !== undefined)
+        events.push({ type: "target", side: c.side, index: c.index });
       if (c.kind === "clock" && vn < -1.5) events.push({ type: "clock" });
     }
   }
@@ -206,9 +263,11 @@ function collideFlipper(b: BallState, f: FlipperDef, fs: FlipperState) {
   let nz = b.z - cz;
   const d = Math.hypot(nx, nz);
   const minD = TABLE.ballR + FLIPPER_R;
-  if (d >= minD || d === 0) return;
-  nx /= d;
-  nz /= d;
+  if (d >= minD) return;
+  if (d < 1e-8) {
+    nx = dz / Math.sqrt(len2);
+    nz = -dx / Math.sqrt(len2);
+  } else { nx /= d; nz /= d; }
   b.x = cx + nx * minD;
   b.z = cz + nz * minD;
   // surface velocity from rotation: v = omega x r (2D: perpendicular)
@@ -303,8 +362,8 @@ function stepBall(sim: SimState, b: BallState, dt: number, events: GameEvent[]) 
   }
 
   // one-way gate: balls cannot re-enter the plunger lane
-  if (b.x > TABLE.laneX + TABLE.ballR && b.z > TABLE.laneTop && b.vx > 0) {
-    b.x = TABLE.laneX + TABLE.ballR;
+  if (b.x > TABLE.laneX - TABLE.ballR && b.z > TABLE.laneTop) {
+    b.x = TABLE.laneX - TABLE.ballR;
     b.vx = -Math.abs(b.vx) * 0.4;
   }
 
@@ -331,7 +390,9 @@ function stepBall(sim: SimState, b: BallState, dt: number, events: GameEvent[]) 
   if (b.z < -18 && Math.abs(b.vx) > 14) events.push({ type: "orbit" });
 
   for (let i = 0; i < FLIPPERS.length; i++) {
-    collideFlipper(b, FLIPPERS[i]!, sim.flippers[i]!);
+    const def = FLIPPERS[i];
+    const state = sim.flippers[i];
+    if (def && state) collideFlipper(b, def, state);
   }
 
   // drain
@@ -342,23 +403,25 @@ function stepBall(sim: SimState, b: BallState, dt: number, events: GameEvent[]) 
 }
 
 export function stepSim(sim: SimState, frameDt: number, events: GameEvent[]) {
-  let acc = Math.min(frameDt, 0.05);
-  sim.portalCooldown = Math.max(0, sim.portalCooldown - frameDt);
+  const frameTime = Math.min(Math.max(frameDt, 0), 0.05);
+  let acc = frameTime;
+  sim.portalCooldown = Math.max(0, sim.portalCooldown - frameTime);
 
   // flippers update at frame rate (input latency matters)
   for (let i = 0; i < sim.flippers.length; i++) {
-    const f = sim.flippers[i]!;
+    const f = sim.flippers[i];
+    if (!f) continue;
     const target = f.pressed ? FLIPPER_UP : FLIPPER_REST;
     const prev = f.angle;
     const diff = target - f.angle;
-    const step = FLIPPER_SPEED * frameDt;
+    const step = FLIPPER_SPEED * frameTime;
     f.angle += Math.max(-step, Math.min(step, diff));
-    f.omega = (f.angle - prev) / Math.max(frameDt, 1e-4);
+    f.omega = (f.angle - prev) / Math.max(frameTime, 1e-4);
   }
 
   // plunger charging
   if (sim.plungerHeld) {
-    sim.plungerPower = Math.min(1, sim.plungerPower + frameDt * 0.9);
+    sim.plungerPower = Math.min(1, sim.plungerPower + frameTime * 0.9);
   }
 
   while (acc > 0) {
@@ -367,6 +430,7 @@ export function stepSim(sim: SimState, frameDt: number, events: GameEvent[]) {
     for (const b of sim.balls) stepBall(sim, b, dt, events);
     acc -= dt;
   }
+  for (const b of sim.balls) recoverStuckBall(sim, b, frameTime);
 }
 
 export function releasePlunger(sim: SimState): boolean {
