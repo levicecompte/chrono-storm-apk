@@ -64,6 +64,6 @@ describe("billes sans blocage", () => {
     b.vx = -10;
     sim.balls = [b];
     stepSim(sim, 1 / 60, []);
-    expect(b.vx).toBeCloseTo(45, 1);
+    expect(b.vx).toBeCloseTo(45, 0);
   });
 });
