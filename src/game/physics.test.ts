@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSim, recoverStuckBall, stepSim, TABLE, FLIPPER_UP, type BallState } from "./physics";
+import { BONUS_TUNNELS, CENTER_POST, FLIPPERS, FLIPPER_REST, flipperTip, createSim, recoverStuckBall, stepSim, TABLE, FLIPPER_UP, type GameEvent, type BallState } from "./physics";
 
 function ball(x = 0, z = 0): BallState {
   return { x, z, vx: 0, vz: 0, active: true, inLane: false };
@@ -29,7 +29,7 @@ describe("billes sans blocage", () => {
     if (!f) throw new Error("Missing flipper");
     f.pressed = true;
     f.angle = FLIPPER_UP;
-    const b = ball(-3.6, 15.45);
+    const b = ball(-4.3, 15.45);
     for (let i = 0; i < 100; i++) expect(recoverStuckBall(sim, b, 0.05)).toBe(false);
     expect(b.vz).toBe(0);
   });
@@ -65,5 +65,49 @@ describe("billes sans blocage", () => {
     sim.balls = [b];
     stepSim(sim, 1 / 60, []);
     expect(b.vx).toBeCloseTo(45, 0);
+  });
+});
+
+describe("tunnels bonus et clou central", () => {
+  it("offre au moins dix tunnels en haut et deux en bas", () => {
+    expect(BONUS_TUNNELS.filter((t) => t.upper).length).toBeGreaterThanOrEqual(10);
+    expect(BONUS_TUNNELS.filter((t) => !t.upper)).toHaveLength(2);
+  });
+  it.each(BONUS_TUNNELS.map((t, index) => ({ ...t, index })))("traverse le tunnel $index et accorde un seul bonus", (t) => {
+    const sim = createSim();
+    const b = ball(t.x, t.z + 0.15);
+    b.vz = -10;
+    sim.balls = [b];
+    const events: GameEvent[] = [];
+    stepSim(sim, 1 / 240, events);
+    expect(b.tunnel?.index).toBe(t.index);
+    for (let i = 0; i < 10; i++) stepSim(sim, 0.05, events);
+    expect(events.filter((e) => e.type === "tunnel")).toEqual([{ type: "tunnel", index: t.index, bonus: t.bonus }]);
+    expect(b.tunnel).toBeUndefined();
+    expect(b.active).toBe(true);
+    expect(b.z).toBeLessThan(t.z - t.length);
+  });
+  it("ne libère pas prématurément une bille en transit", () => {
+    const sim = createSim();
+    const b = ball(-5.4, 13);
+    b.tunnel = { index: 0, elapsed: 0 };
+    for (let i = 0; i < 100; i++) expect(recoverStuckBall(sim, b, 0.05)).toBe(false);
+    expect(b.vz).toBe(0);
+  });
+  it("écarte les flippers tout en laissant un passage autour du clou fin", () => {
+    const left = FLIPPERS[0], right = FLIPPERS[1];
+    if (!left || !right) throw new Error("Missing flippers");
+    const gap = flipperTip(right, FLIPPER_REST).x - flipperTip(left, FLIPPER_REST).x;
+    expect(gap).toBeGreaterThan(2 * (TABLE.ballR + CENTER_POST.r + 0.1));
+    expect(CENTER_POST.r).toBeLessThan(TABLE.ballR / 2);
+  });
+  it("fait rebondir la bille sur le clou entre les flippers", () => {
+    const sim = createSim();
+    const b = ball(0, CENTER_POST.z - TABLE.ballR - CENTER_POST.r + 0.01);
+    b.vz = 8;
+    sim.balls = [b];
+    stepSim(sim, 1 / 240, []);
+    expect(b.vz).toBeLessThan(0);
+    expect(b.active).toBe(true);
   });
 });
