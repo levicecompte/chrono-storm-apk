@@ -169,8 +169,31 @@
   --tesla: oklch(0.8 0.14 220);
   --vortex: oklch(0.6 0.22 300);
   --nixie: oklch(0.82 0.16 75);
-  --shadow-tesla-light: 0 0 10px color-mix(in oklab, var(--tesla) 60%, transparent), 0 0 26px color-mix(in oklab, var(--tesla) 25%, transparent);
-  --shadow-brass-light: 0 0 12px color-mix(in oklab, var(--brass) 55%, transparent), 0 0 30px color-mix(in oklab, var(--brass) 25%, transparent);
+  --shadow-tesla-light: 0 0 6px color-mix(in oklab, var(--nixie) 20%, transparent);
+  --shadow-brass-light: 0 0 8px color-mix(in oklab, var(--brass) 20%, transparent);
+}
+
+/* Vintage cabinet: warm lamps, neutral worn metal, subdued display glow. */
+:root {
+  --background: oklch(0.13 0.005 260);
+  --card: oklch(0.18 0.005 260);
+  --muted: oklch(0.23 0.008 260);
+  --tesla: oklch(0.78 0.13 65);
+  --vortex: oklch(0.65 0.055 90);
+  --border: oklch(0.35 0.007 260);
+  --nixie: oklch(0.8 0.16 65);
+}
+
+.backglass {
+  border: 5px solid var(--border);
+  background: var(--background);
+  border-radius: 4px;
+}
+.nixie {
+  letter-spacing: 0;
+  text-shadow: 0 0 4px color-mix(in oklab, var(--nixie) 45%, transparent);
+  background-image: radial-gradient(var(--background) 0.5px, transparent 0.8px);
+  background-size: 3px 3px;
 }
 
 @theme inline {

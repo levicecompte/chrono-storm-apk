@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { Environment, Lightformer, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import {
   BUMPERS,
@@ -34,14 +34,16 @@ import {
   sfxTarget,
   sfxZap,
 } from "../../game/audio";
-import { LightningArcs, type Arc } from "./Lightning";
+import { type Arc } from "./Lightning";
+import playfieldArt from "../../assets/mansion-playfield.jpg";
+import { VintageRails } from "./VintageRails";
 
-const COPPER = "#9a5a2a";
-const BRASS = "#c9a227";
+const COPPER = "#a5a7a9";
+const BRASS = "#e2bd2a";
 const DARKWOOD = "#1a0d06";
 const IRON = "#2a2a30";
-const TESLA = "#66ccff";
-const VORTEX = "#8a4bff";
+const TESLA = "#ffb15c";
+const VORTEX = "#c99b69";
 
 export function Scene() {
   const sim = useRef<SimState>(createSim());
@@ -74,10 +76,14 @@ export function Scene() {
   });
 
   const woodTex = useMemo(() => makeWoodTexture(), []);
-  const engravingTex = useMemo(() => makeEngravingTexture(), []);
+  const engravingTex = useTexture(playfieldArt, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; });
 
   useFrame((state, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
+    if (state.camera instanceof THREE.PerspectiveCamera) {
+      const fov = Math.max(27, 27 * 0.72 / state.camera.aspect);
+      if (Math.abs(state.camera.fov - fov) > 0.01) { state.camera.fov = fov; state.camera.updateProjectionMatrix(); }
+    }
     const g = useGameStore.getState();
     const s = sim.current;
 
@@ -174,7 +180,7 @@ export function Scene() {
               shake.current = 0.6;
             } else {
               g.addScore(10000);
-              g.flash(`TESLA COIL ${Math.round(g.teslaCharge)}%`, 1400);
+              g.flash("MANSION BONUS", 1400);
             }
             break;
           }
@@ -295,22 +301,22 @@ export function Scene() {
     <>
       <color attach="background" args={["#07060c"]} />
       <fog attach="fog" args={["#07060c", 55, 110]} />
-      <ambientLight intensity={0.5} color="#445" />
-      <directionalLight position={[-12, 25, -10]} intensity={1.6} color="#9db8ff" castShadow shadow-mapSize={[1024, 1024]} />
+      <ambientLight intensity={0.5} color="#c3c5ca" />
+      <directionalLight position={[-12, 25, -10]} intensity={2.2} color="#e5dbce" />
       <pointLight position={[0, 8, 16]} intensity={14} color="#ffb066" distance={30} />
-      <pointLight position={[0, 10, -8]} intensity={10} color="#8fb8ff" distance={34} />
-      <pointLight ref={flashLight} intensity={0} color="#bfe6ff" distance={40} />
+      <pointLight position={[0, 10, -8]} intensity={10} color="#e6d9c1" distance={34} />
+      <pointLight ref={flashLight} intensity={0} color="#ffcc88" distance={40} />
       <pointLight position={[PORTAL.x, 3, PORTAL.z]} intensity={10} color={VORTEX} distance={16} />
       <Environment resolution={64}>
-        <Lightformer intensity={2} position={[0, 8, 0]} scale={[12, 12, 1]} color="#8bb8ff" />
+        <Lightformer intensity={2} position={[0, 8, 0]} scale={[12, 12, 1]} color="#e3e6eb" />
         <Lightformer intensity={1} color="#ffb066" position={[-6, 2, 6]} rotation-y={Math.PI / 2} scale={[14, 1, 1]} />
-        <Lightformer intensity={0.7} color="#b37cff" position={[6, 3, -6]} rotation-y={-Math.PI / 2} scale={[12, 1, 1]} />
+        <Lightformer intensity={0.7} color="#b8b9bc" position={[6, 3, -6]} rotation-y={-Math.PI / 2} scale={[12, 1, 1]} />
       </Environment>
 
       {/* Playfield */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0, -1]} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.04, -1]} receiveShadow>
         <planeGeometry args={[20.4, 42.5]} />
-        <meshStandardMaterial map={engravingTex} color="#e8c88f" roughness={0.75} metalness={0.15} />
+        <meshStandardMaterial map={engravingTex} roughness={0.45} metalness={0.05} />
       </mesh>
       {/* Cabinet body */}
       <mesh position={[0, -1.2, -1]}>
@@ -330,70 +336,7 @@ export function Scene() {
         );
       })}
 
-      {/* Tesla coil (left) */}
-      <group position={[-8.2, 0, -14.5]}>
-        <mesh position={[0, 1.4, 0]} castShadow>
-          <cylinderGeometry args={[0.9, 1.3, 2.8, 16]} />
-          <meshStandardMaterial color={COPPER} metalness={0.9} roughness={0.3} />
-        </mesh>
-        <mesh position={[0, 3.1, 0]}>
-          <torusGeometry args={[0.9, 0.32, 12, 24]} />
-          <meshStandardMaterial color={TESLA} emissive={TESLA} emissiveIntensity={1.6} metalness={0.6} roughness={0.2} />
-        </mesh>
-        <pointLight position={[0, 3.4, 0]} intensity={6} color={TESLA} distance={12} />
-      </group>
-
-      {/* Gothic clock (back-left) */}
-      <group position={[CLOCK.x, 0, CLOCK.z - 1.2]}>
-        <mesh position={[0, 2.6, 0]} castShadow>
-          <cylinderGeometry args={[1.5, 1.5, 0.5, 24]} />
-            <meshStandardMaterial color={BRASS} emissive={BRASS} emissiveIntensity={0.25} metalness={0.9} roughness={0.25} />
-        </mesh>
-        <mesh position={[0, 2.6, 0.28]} rotation-x={Math.PI / 2}>
-          <circleGeometry args={[1.25, 24]} />
-          <meshStandardMaterial color="#0d0a14" emissive={eraColors[era]} emissiveIntensity={0.5} />
-        </mesh>
-        <group ref={clockHand} position={[0, 2.6, 0.34]}>
-          <mesh position={[0, 0.45, 0]}>
-            <boxGeometry args={[0.1, 0.9, 0.06]} />
-            <meshStandardMaterial color={BRASS} emissive={BRASS} emissiveIntensity={0.4} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* Temporal Engine Mk.III (right) */}
-      <group position={[5.6, 0, -13.5]}>
-        <mesh position={[0, 0.9, 0]} castShadow>
-          <boxGeometry args={[2.6, 1.8, 3.4]} />
-          <meshStandardMaterial color={IRON} metalness={0.85} roughness={0.4} />
-        </mesh>
-        <mesh position={[0, 2.1, 0]} rotation-z={Math.PI / 2} castShadow>
-          <cylinderGeometry args={[0.5, 0.5, 2.8, 12]} />
-          <meshStandardMaterial color={COPPER} metalness={0.9} roughness={0.3} />
-        </mesh>
-        {[0, 1, 2].map((i) => (
-          <mesh key={i} position={[-0.8 + i * 0.8, 2.9, 0]}>
-            <sphereGeometry args={[0.28, 12, 12]} />
-            <meshStandardMaterial color="#ffd9a0" emissive="#ff9a3c" emissiveIntensity={1.2} transparent opacity={0.85} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* Portal vortex (back center) */}
-      <group position={[PORTAL.x, 0, PORTAL.z]}>
-        <mesh position={[0, 1.8, -0.6]} castShadow>
-          <torusGeometry args={[1.6, 0.35, 10, 24]} />
-          <meshStandardMaterial color="#3a3a44" metalness={0.7} roughness={0.5} />
-        </mesh>
-        <mesh ref={portalRef} position={[0, 1.8, -0.6]}>
-          <circleGeometry args={[1.35, 32]} />
-          <meshBasicMaterial ref={vortexMat} color={VORTEX} transparent opacity={0.85} />
-        </mesh>
-        <mesh position={[0, 0.15, 0]} rotation-x={-Math.PI / 2}>
-          <circleGeometry args={[PORTAL.r, 24]} />
-          <meshBasicMaterial color="#050308" />
-        </mesh>
-      </group>
+      <VintageRails />
 
       {/* Bumpers */}
       {BUMPERS.map((b, i) => (
@@ -406,7 +349,7 @@ export function Scene() {
             castShadow
           >
             <cylinderGeometry args={[b.r, b.r * 1.1, 1.4, 20]} />
-            <meshStandardMaterial color="#8a2be2" emissive={TESLA} emissiveIntensity={0.45} metalness={0.5} roughness={0.3} />
+            <meshStandardMaterial color="#e7dcc2" emissive={TESLA} emissiveIntensity={0.18} metalness={0.5} roughness={0.3} />
           </mesh>
           <pointLight position={[0, 1.8, 0]} intensity={1.5} color={TESLA} distance={7} />
         </group>
@@ -454,7 +397,7 @@ export function Scene() {
       <PlungerVisual sim={sim} />
 
       {/* Lightning arcs */}
-      <LightningArcs arcs={arcs} />
+
     </>
   );
 }
@@ -485,7 +428,8 @@ function makeWoodTexture(): THREE.Texture {
   const c = document.createElement("canvas");
   c.width = 256;
   c.height = 256;
-  const g = c.getContext("2d")!;
+  const g = c.getContext("2d");
+  if (!g) return new THREE.Texture();
   g.fillStyle = "#241206";
   g.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 90; i++) {
@@ -503,60 +447,5 @@ function makeWoodTexture(): THREE.Texture {
   return t;
 }
 
-// Playfield engraving: gothic filigree + zone labels
-function makeEngravingTexture(): THREE.Texture {
-  const c = document.createElement("canvas");
-  c.width = 512;
-  c.height = 1024;
-  const g = c.getContext("2d")!;
-  const grad = g.createLinearGradient(0, 0, 0, 1024);
-  grad.addColorStop(0, "#2b1a0c");
-  grad.addColorStop(0.6, "#1e1108");
-  grad.addColorStop(1, "#170c05");
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 512, 1024);
-  // filigree swirls
-  g.strokeStyle = "rgba(201,162,39,0.28)";
-  g.lineWidth = 2;
-  for (let i = 0; i < 26; i++) {
-    const x = Math.random() * 512;
-    const y = Math.random() * 1024;
-    const r = 18 + Math.random() * 46;
-    g.beginPath();
-    g.arc(x, y, r, Math.random() * 6, Math.random() * 3 + 2);
-    g.stroke();
-  }
-  // gear motifs
-  for (let i = 0; i < 8; i++) {
-    const x = 60 + Math.random() * 392;
-    const y = 80 + Math.random() * 860;
-    const r = 14 + Math.random() * 22;
-    g.save();
-    g.translate(x, y);
-    g.strokeStyle = "rgba(154,90,42,0.5)";
-    for (let tooth = 0; tooth < 10; tooth++) {
-      g.rotate(Math.PI / 5);
-      g.strokeRect(r, -2.5, 7, 5);
-    }
-    g.beginPath();
-    g.arc(0, 0, r, 0, Math.PI * 2);
-    g.stroke();
-    g.restore();
-  }
-  // labels
-  g.fillStyle = "rgba(245,197,24,0.6)";
-  g.font = "bold 26px Georgia, serif";
-  g.textAlign = "center";
-  g.fillText("RIFT LOOP", 90, 830);
-  g.fillText("LIGHTNING LANE", 120, 250);
-  g.fillText("VOLTAGE", 256, 420);
-  g.font = "bold 20px Georgia, serif";
-  g.fillText("DANGER · HIGH VOLTAGE · 1885", 256, 990);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-// silence unused import warning for flipperTip (kept for debug)
 void flipperTip;
 void FLIPPER_REST;

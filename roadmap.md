@@ -1,3 +1,6 @@
-- [ ] Corriger les collisions et libérer automatiquement les billes bloquées sans toucher aux billes en attente ou maintenues sur un flipper.
-- [ ] Ajouter les effets lumineux Tailwind aux scores et commandes, avec réduction des animations.
-- [ ] Tester la physique et vérifier le jeu dans le navigateur.
+- [x] Corriger les collisions et libérer automatiquement les billes bloquées sans toucher aux billes en attente ou maintenues sur un flipper.
+- [x] Ajouter les effets lumineux Tailwind aux scores et commandes, avec réduction des animations.
+- [x] Tester la physique et vérifier le jeu dans le navigateur.
+- [x] Adapter le plateau et l’afficheur au flipper photographié : manoir gothique original, marais, cimetière, rails métalliques et ampoules chaudes.
+- [x] Ajouter un workflow GitHub Actions produisant un APK Android de test téléchargeable sans Android Studio local.
+- [ ] Vérifier la première compilation APK réelle : nécessite une exécution Actions dans le dépôt GitHub de l’utilisateur.

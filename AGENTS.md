@@ -11,3 +11,5 @@
 
 - Keep anti-stuck recovery in the pinball physics core and regression-test lane waiting and flipper catches, so visual changes cannot alter ball safety.
 - Define HUD lighting with semantic CSS tokens and Tailwind utilities, honoring reduced-motion preferences.
+- Keep vintage playfield artwork independent from collision geometry; cosmetic rails must not imply additional playable ramps.
+- Build Android debug APKs in GitHub Actions by generating Capacitor's Android project and wrapping the configured hosted URL; do not bundle the SSR application as offline Android content.
