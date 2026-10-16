@@ -135,6 +135,9 @@ export function flipperTip(f: FlipperDef, angle: number) {
 // ---- Simulation ----
 const SUBDT = 1 / 240;
 const REST_WALL = 0.45;
+// User rule: wall rebounds amplified ×20, capped for ball safety.
+const WALL_BOUNCE_MULT = 20;
+const MAX_WALL_BOUNCE = 45;
 const REST_BUMPER_BOOST = 16;
 const STUCK_SECONDS = 2;
 const STUCK_RADIUS = 0.8;
@@ -210,12 +213,13 @@ function collideSegment(b: BallState, s: Seg, events: GameEvent[]) {
   b.z = cz + nz * TABLE.ballR;
   const vn = b.vx * nx + b.vz * nz;
   if (vn < 0) {
-    const rest = s.rest ?? REST_WALL;
-    b.vx -= (1 + rest) * vn * nx;
-    b.vz -= (1 + rest) * vn * nz;
-    // tangential friction
-    b.vx *= 0.995;
-    b.vz *= 0.995;
+    // Wall rebounds ×20, capped so the ball never gains unbounded energy.
+    const rest = (s.rest ?? REST_WALL) * WALL_BOUNCE_MULT;
+    const vtx = b.vx - vn * nx;
+    const vtz = b.vz - vn * nz;
+    const outVn = Math.min(-rest * vn, MAX_WALL_BOUNCE);
+    b.vx = vtx * 0.995 + outVn * nx;
+    b.vz = vtz * 0.995 + outVn * nz;
     if (s.sling && vn < -2) events.push({ type: "sling", x: cx, z: cz });
   }
 }

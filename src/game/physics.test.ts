@@ -50,4 +50,20 @@ describe("billes sans blocage", () => {
     expect(Math.hypot(b.x + 3.2, b.z + 6)).toBeGreaterThanOrEqual(1.7 - 1e-6);
     expect(Number.isFinite(b.vz)).toBe(true);
   });
+  it("amplifie le rebond des parois vingt fois", () => {
+    const sim = createSim();
+    const b = ball(-10 + TABLE.ballR + 0.05, 0);
+    b.vx = -2;
+    sim.balls = [b];
+    stepSim(sim, 1 / 60, []);
+    expect(b.vx).toBeCloseTo(0.45 * 20 * 2, 1);
+  });
+  it("plafonne le rebond des parois pour la sécurité de la bille", () => {
+    const sim = createSim();
+    const b = ball(-10 + TABLE.ballR + 0.05, 0);
+    b.vx = -10;
+    sim.balls = [b];
+    stepSim(sim, 1 / 60, []);
+    expect(b.vx).toBeCloseTo(45, 1);
+  });
 });
