@@ -52,7 +52,7 @@ describe("billes sans blocage", () => {
   });
   it("amplifie le rebond des parois vingt fois", () => {
     const sim = createSim();
-    const b = ball(-10 + TABLE.ballR + 0.05, 0);
+    const b = ball(-10 + TABLE.ballR - 0.01, 0);
     b.vx = -2;
     sim.balls = [b];
     stepSim(sim, 1 / 60, []);
@@ -60,7 +60,7 @@ describe("billes sans blocage", () => {
   });
   it("plafonne le rebond des parois pour la sécurité de la bille", () => {
     const sim = createSim();
-    const b = ball(-10 + TABLE.ballR + 0.05, 0);
+    const b = ball(-10 + TABLE.ballR - 0.01, 0);
     b.vx = -10;
     sim.balls = [b];
     stepSim(sim, 1 / 60, []);
