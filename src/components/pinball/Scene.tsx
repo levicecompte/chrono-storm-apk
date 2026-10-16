@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -37,6 +37,8 @@ import {
 import { type Arc } from "./Lightning";
 import playfieldArt from "../../assets/mansion-playfield.jpg";
 import { VintageRails } from "./VintageRails";
+import { BonusTunnels } from "./BonusTunnels";
+import { makeSurfaceTexture, type SurfaceTextures } from "./surfaceTextures";
 
 const COPPER = "#a5a7a9";
 const BRASS = "#e2bd2a";
@@ -76,6 +78,8 @@ export function Scene() {
   });
 
   const woodTex = useMemo(() => makeWoodTexture(), []);
+  const surfaces = useMemo(() => ({ metal: makeSurfaceTexture("metal"), rubber: makeSurfaceTexture("rubber"), stone: makeSurfaceTexture("stone") }), []);
+  useEffect(() => () => { Object.values(surfaces).forEach((t) => t.dispose()); woodTex.dispose(); }, [surfaces, woodTex]);
   const engravingTex = useTexture(playfieldArt, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; });
 
   useFrame((state, rawDelta) => {
@@ -89,11 +93,11 @@ export function Scene() {
 
     if (g.phase === "playing") {
       // input → flippers
-      s.flippers[0]!.pressed = input.current.left && !g.tilted;
-      s.flippers[1]!.pressed = input.current.right && !g.tilted;
-      if (s.flippers[0]!.pressed && !prevFlip.current[0]) sfxFlipper();
-      if (s.flippers[1]!.pressed && !prevFlip.current[1]) sfxFlipper();
-      prevFlip.current = [s.flippers[0]!.pressed, s.flippers[1]!.pressed];
+      s.flippers.forEach((flipper, i) => {
+        flipper.pressed = (i === 0 ? input.current.left : input.current.right) && !g.tilted;
+        if (flipper.pressed && !prevFlip.current[i]) sfxFlipper();
+        prevFlip.current[i] = flipper.pressed;
+      });
 
       // plunger — launch on release edge
       const wasHeld = s.plungerHeld;
@@ -124,6 +128,11 @@ export function Scene() {
 
       for (const ev of events) {
         switch (ev.type) {
+          case "tunnel":
+            g.addScore(ev.bonus);
+            g.flash(`TUNNEL BONUS +${ev.bonus.toLocaleString("fr-FR")}`, 1400);
+            sfxTarget();
+            break;
           case "bumper": {
             g.addScore(1000);
             g.setCharge(g.teslaCharge + 8);
@@ -148,7 +157,7 @@ export function Scene() {
           }
           case "clock": {
             const order = ["past", "present", "future"] as const;
-            const next = order[(order.indexOf(g.era) + 1) % 3]!;
+            const next = order[(order.indexOf(g.era) + 1) % 3] ?? "present";
             g.setEra(next);
             g.addScore(5000);
             g.flash(`ERA: ${next.toUpperCase()}`, 1500);
@@ -235,8 +244,9 @@ export function Scene() {
     for (let i = 0; i < 2; i++) {
       const grp = flipperRefs.current[i];
       if (!grp) continue;
-      const f = FLIPPERS[i]!;
-      const fs = s.flippers[i]!;
+      const f = FLIPPERS[i];
+      const fs = s.flippers[i];
+      if (!f || !fs) continue;
       const a = f.dir === 1 ? -fs.angle : fs.angle;
       grp.rotation.y = f.dir === 1 ? a : Math.PI + a;
     }
@@ -331,12 +341,13 @@ export function Scene() {
         return (
           <mesh key={i} position={[(s.ax + s.bx) / 2, 0.55, (s.az + s.bz) / 2]} rotation-y={-ang} castShadow>
             <boxGeometry args={[len, 1.1, 0.5]} />
-            <meshStandardMaterial color={s.sling ? "#7a1f1f" : COPPER} metalness={0.85} roughness={0.35} />
+            <meshStandardMaterial map={surfaces.metal} color={s.sling ? "#7a1f1f" : COPPER} metalness={0.85} roughness={0.35} />
           </mesh>
         );
       })}
 
-      <VintageRails />
+      <VintageRails surfaces={surfaces} />
+      <BonusTunnels surfaces={surfaces} sim={sim} />
 
       {/* Bumpers */}
       {BUMPERS.map((b, i) => (
@@ -349,7 +360,7 @@ export function Scene() {
             castShadow
           >
             <cylinderGeometry args={[b.r, b.r * 1.1, 1.4, 20]} />
-            <meshStandardMaterial color="#e7dcc2" emissive={TESLA} emissiveIntensity={0.18} metalness={0.5} roughness={0.3} />
+            <meshStandardMaterial map={surfaces.rubber} color="#e7dcc2" emissive={TESLA} emissiveIntensity={0.18} metalness={0.5} roughness={0.3} />
           </mesh>
           <pointLight position={[0, 1.8, 0]} intensity={1.5} color={TESLA} distance={7} />
         </group>
@@ -359,7 +370,7 @@ export function Scene() {
       {TARGETS.map((t, i) => (
         <mesh key={i} position={[t.x, 0.5, t.z]} castShadow>
           <cylinderGeometry args={[t.r, t.r, 1, 12]} />
-          <meshStandardMaterial color={BRASS} emissive="#ffb300" emissiveIntensity={0.5} metalness={0.8} roughness={0.3} />
+          <meshStandardMaterial map={surfaces.metal} color={BRASS} emissive="#ffb300" emissiveIntensity={0.5} metalness={0.8} roughness={0.3} />
         </mesh>
       ))}
 
@@ -374,7 +385,7 @@ export function Scene() {
         >
           <mesh position={[FLIPPER_LEN / 2, 0, 0]} rotation-z={Math.PI / 2} castShadow>
             <capsuleGeometry args={[FLIPPER_R, FLIPPER_LEN, 6, 12]} />
-            <meshStandardMaterial color={BRASS} metalness={0.9} roughness={0.25} />
+            <meshStandardMaterial map={surfaces.metal} color={BRASS} metalness={0.9} roughness={0.25} />
           </mesh>
         </group>
       ))}
@@ -394,7 +405,7 @@ export function Scene() {
       ))}
 
       {/* Plunger */}
-      <PlungerVisual sim={sim} />
+      <PlungerVisual sim={sim} surfaces={surfaces} />
 
       {/* Lightning arcs */}
 
@@ -402,7 +413,7 @@ export function Scene() {
   );
 }
 
-function PlungerVisual({ sim }: { sim: React.RefObject<SimState> }) {
+function PlungerVisual({ sim, surfaces }: { sim: React.RefObject<SimState>; surfaces: SurfaceTextures }) {
   const ref = useRef<THREE.Mesh>(null);
   useFrame(() => {
     if (ref.current) {
@@ -413,11 +424,11 @@ function PlungerVisual({ sim }: { sim: React.RefObject<SimState> }) {
     <group position={[8.8, 0.55, 0]}>
       <mesh ref={ref} position={[0, 0, 21.5]}>
         <cylinderGeometry args={[0.35, 0.35, 2.2, 12]} />
-        <meshStandardMaterial color={BRASS} metalness={0.9} roughness={0.3} />
+        <meshStandardMaterial map={surfaces.metal} color={BRASS} metalness={0.9} roughness={0.3} />
       </mesh>
       <mesh position={[0, 0, 22.8]}>
         <sphereGeometry args={[0.55, 14, 14]} />
-        <meshStandardMaterial color="#7a1f1f" roughness={0.5} />
+        <meshStandardMaterial map={surfaces.rubber} color="#7a1f1f" roughness={0.5} />
       </mesh>
     </group>
   );
