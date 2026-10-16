@@ -73,6 +73,8 @@ jobs:
 
       - name: Add download instructions
         run: |
-          echo '### APK de test Android' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Téléchargez **mansion-pinball-android-debug** dans Artifacts en bas de cette exécution, décompressez le ZIP puis installez app-debug.apk sur Android.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'APK signé automatiquement avec une clé de test, non destiné au Play Store. Internet est nécessaire : cette version ouvre le jeu en ligne configuré dans le projet.' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo '### APK de test Android'
+            echo 'Téléchargez **mansion-pinball-android-debug** dans Artifacts en bas de cette exécution, décompressez le ZIP puis installez app-debug.apk sur Android.'
+            echo 'APK signé automatiquement avec une clé de test, non destiné au Play Store. Internet est nécessaire : cette version ouvre le jeu en ligne configuré dans le projet.'
+          } >> "$GITHUB_STEP_SUMMARY"
