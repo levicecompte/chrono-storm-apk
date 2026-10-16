@@ -9,6 +9,8 @@ export interface BallState {
   vz: number;
   active: boolean;
   inLane: boolean; // plunger lane
+  tunnel?: { index: number; elapsed: number };
+  tunnelCooldown?: number;
 }
 
 export interface FlipperState {
@@ -26,6 +28,7 @@ export type GameEvent =
   | { type: "orbit" }
   | { type: "drain" }
   | { type: "launch" };
+ 
 
 // ---- Table layout (units: ~cm/5, table 20 x 42) ----
 export const TABLE = {
