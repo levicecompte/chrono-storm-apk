@@ -80,6 +80,10 @@ export function Scene() {
 
   useFrame((state, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
+    if (state.camera instanceof THREE.PerspectiveCamera) {
+      const fov = Math.max(27, 27 * 0.72 / state.camera.aspect);
+      if (Math.abs(state.camera.fov - fov) > 0.01) { state.camera.fov = fov; state.camera.updateProjectionMatrix(); }
+    }
     const g = useGameStore.getState();
     const s = sim.current;
 
@@ -176,7 +180,7 @@ export function Scene() {
               shake.current = 0.6;
             } else {
               g.addScore(10000);
-              g.flash(`TESLA COIL ${Math.round(g.teslaCharge)}%`, 1400);
+              g.flash("MANSION BONUS", 1400);
             }
             break;
           }
@@ -298,7 +302,7 @@ export function Scene() {
       <color attach="background" args={["#07060c"]} />
       <fog attach="fog" args={["#07060c", 55, 110]} />
       <ambientLight intensity={0.5} color="#c3c5ca" />
-      <directionalLight position={[-12, 25, -10]} intensity={2.2} color="#e5dbce" castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-12, 25, -10]} intensity={2.2} color="#e5dbce" />
       <pointLight position={[0, 8, 16]} intensity={14} color="#ffb066" distance={30} />
       <pointLight position={[0, 10, -8]} intensity={10} color="#e6d9c1" distance={34} />
       <pointLight ref={flashLight} intensity={0} color="#ffcc88" distance={40} />
