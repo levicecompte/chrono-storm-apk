@@ -4,3 +4,6 @@
 - [x] Adapter le plateau et l’afficheur au flipper photographié : manoir gothique original, marais, cimetière, rails métalliques et ampoules chaudes.
 - [x] Ajouter un workflow GitHub Actions produisant un APK Android de test téléchargeable sans Android Studio local.
 - [ ] Vérifier la première compilation APK réelle : nécessite une exécution Actions dans le dépôt GitHub de l’utilisateur.
+- [ ] Texturer les objets fixes, écarter les flippers et ajouter un clou de rebond central.
+- [ ] Remplacer les obstacles inférieurs par des tunnels bonus et en ajouter au moins dix en haut.
+- [ ] Tester les tunnels, les rebonds et vérifier le plateau en jeu.
