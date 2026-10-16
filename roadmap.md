@@ -1,0 +1,3 @@
+- [ ] Corriger les collisions et libérer automatiquement les billes bloquées sans toucher aux billes en attente ou maintenues sur un flipper.
+- [ ] Ajouter les effets lumineux Tailwind aux scores et commandes, avec réduction des animations.
+- [ ] Tester la physique et vérifier le jeu dans le navigateur.
