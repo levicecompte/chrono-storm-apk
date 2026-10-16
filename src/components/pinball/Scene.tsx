@@ -314,7 +314,7 @@ export function Scene() {
       </Environment>
 
       {/* Playfield */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0, -1]} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.04, -1]} receiveShadow>
         <planeGeometry args={[20.4, 42.5]} />
         <meshStandardMaterial map={engravingTex} roughness={0.45} metalness={0.05} />
       </mesh>
