@@ -81,7 +81,7 @@ describe("tunnels bonus et clou central", () => {
     const events: GameEvent[] = [];
     stepSim(sim, 1 / 240, events);
     expect(b.tunnel?.index).toBe(t.index);
-    for (let i = 0; i < 10; i++) stepSim(sim, 0.05, events);
+    for (let i = 0; i < 150 && b.tunnel; i++) stepSim(sim, 1 / 240, events);
     expect(events.filter((e) => e.type === "tunnel")).toEqual([{ type: "tunnel", index: t.index, bonus: t.bonus }]);
     expect(b.tunnel).toBeUndefined();
     expect(b.active).toBe(true);

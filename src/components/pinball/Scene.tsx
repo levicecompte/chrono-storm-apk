@@ -85,7 +85,7 @@ export function Scene() {
   useFrame((state, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
     if (state.camera instanceof THREE.PerspectiveCamera) {
-      const fov = Math.max(27, 27 * 0.72 / state.camera.aspect);
+      const fov = Math.min(85, Math.max(27, 27 * state.camera.aspect / 0.71));
       if (Math.abs(state.camera.fov - fov) > 0.01) { state.camera.fov = fov; state.camera.updateProjectionMatrix(); }
     }
     const g = useGameStore.getState();

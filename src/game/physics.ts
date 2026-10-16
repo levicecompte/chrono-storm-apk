@@ -337,14 +337,14 @@ function stepBall(sim: SimState, b: BallState, dt: number, events: GameEvent[]) 
   b.tunnelCooldown = Math.max(0, (b.tunnelCooldown ?? 0) - dt);
   if (b.tunnel) {
     const tunnel = BONUS_TUNNELS[b.tunnel.index];
-    if (!tunnel) { b.tunnel = undefined; return; }
+    if (!tunnel) { delete b.tunnel; return; }
     b.tunnel.elapsed += dt;
     const progress = Math.min(1, b.tunnel.elapsed / 0.45);
     b.x = tunnel.x;
     b.z = tunnel.z - progress * (tunnel.length + 0.7);
     if (progress >= 1) {
       events.push({ type: "tunnel", index: b.tunnel.index, bonus: tunnel.bonus });
-      b.tunnel = undefined;
+      delete b.tunnel;
       b.tunnelCooldown = 1.2;
       b.vx = tunnel.x > 0 ? -2 : 2;
       b.vz = -14;
