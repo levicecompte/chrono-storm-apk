@@ -169,6 +169,8 @@
   --tesla: oklch(0.8 0.14 220);
   --vortex: oklch(0.6 0.22 300);
   --nixie: oklch(0.82 0.16 75);
+  --shadow-tesla-light: 0 0 10px color-mix(in oklab, var(--tesla) 60%, transparent), 0 0 26px color-mix(in oklab, var(--tesla) 25%, transparent);
+  --shadow-brass-light: 0 0 12px color-mix(in oklab, var(--brass) 55%, transparent), 0 0 30px color-mix(in oklab, var(--brass) 25%, transparent);
 }
 
 @theme inline {
@@ -179,6 +181,28 @@
   --color-nixie: var(--nixie);
   --font-display: "Cinzel", serif;
   --font-mono: "JetBrains Mono", monospace;
+  --shadow-tesla: var(--shadow-tesla-light);
+  --shadow-brass: var(--shadow-brass-light);
+  --animate-energy: energy-glow 2.6s ease-in-out infinite;
+}
+
+@utility score-flash {
+  animation: score-light 500ms ease-out;
+}
+
+@keyframes energy-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+
+@keyframes score-light {
+  0% { filter: brightness(1.9); }
+  100% { filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-flash, .animate-energy, .event-banner { animation: none; }
+  .start-btn, .launch-btn, .tesla-gauge { transition: none; }
 }
 
 @layer components {
